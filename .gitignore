@@ -5,3 +5,5 @@
 .DS_Store
 *.tfvars
 *.tfstate.*
+dev-infra/.terraform/**
+prod-infra/.terraform/**

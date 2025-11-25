@@ -1,63 +1,55 @@
-name: "Building and Pushing Docker Image"
+name: python app Infra
 on:
-  workflow_dispatch:   # allows manual triggering from GitHub UI
+  workflow_dispatch:
   push:
     branches:
-      - main
+      - deployment-infra
     paths:
-      - ecommerce-app/**
+      - "*.tf"
 
 env:
-  DO_CONNECT_TOKEN: ${{ secrets.DO_CONNECT_TOKEN }} # DigitalOcean API token stored in GitHub Secrets
-  DEPLOYMENT_NAME: ${{ vars.DEPLOYMENT_NAME }}
-  REGISTRY: ${{ vars.REGISTRY }}
-  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
-  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
-  DO_CLUSTER_NAME: ${{ vars.DO_CLUSTER_NAME }} # DigitalOcean Kubernetes cluster name stored in GitHub Secrets
-      
+  TF_VAR_do_token: ${{ secrets.DO_CONNECT_TOKEN}}
+
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+
+  terraform:
+    name: Terraform code changes
+    runs-on: [self-hosted, windows]
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install doctl and authenticate
-        uses: digitalocean/action-doctl@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          token: ${{ secrets.DO_CONNECT_TOKEN }}
+          terraform_version: 1.13.3
 
-      - name: Build Docker image
-        run: |
-          docker build -t registry.digitalocean.com/smoke/python-app:${{ github.run_number }} .
-      
-      - name: Login to DigitalOcean registry
-        run: doctl registry login
+      - name: Terraform Init
+        id: terraform_init
+        run: terraform init
 
-      - name: Push Docker image
-        run: |
-          docker push registry.digitalocean.com/smoke/python-app:${{ github.run_number }}
+      - name: Terraform format
+        id: terraform_fmt
+        run: terraform fmt -check
 
-  Deploy-to-kubernetes:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install doctl and authenticate
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_CONNECT_TOKEN }}
+      - name: Terraform validate
+        id: terraform_validate
+        run: terraform validate
 
-      - name: Configure kubectl
-        run: |
-          echo "Using cluster: $DO_CLUSTER_NAME"
-          doctl kubernetes cluster kubeconfig save "$DO_CLUSTER_NAME"
+      - name: Terraform plan
+        id: terraform_plan
+        run: terraform plan -out=tfplan
+        continue-on-error: true
 
-      - name: Update deployment
-        run: |
-          kubectl set image deployment/${DEPLOYMENT_NAME} \
-            $CONTAINER_NAME=${REGISTRY}/${IMAGE_NAME}:${{ github.run_number }}
+      - name: Terraform plan output
+        if: steps.terraform_plan.outcome == 'failure'
+        run: exit 1
 
-      - name: Verify deployment
-        run: |
-          kubectl rollout status deployment/${DEPLOYMENT_NAME}
-          kubectl get pods
+      - name: Terraform apply
+        id: terraform_apply
+        if: steps.terraform_plan.outcome == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: terraform apply -auto-approve -input=false -parallelism=1 tfplan

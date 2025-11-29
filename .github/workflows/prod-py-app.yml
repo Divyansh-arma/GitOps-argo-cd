@@ -18,6 +18,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: ./prod-infra
 
     steps:
       - name: Checkout code

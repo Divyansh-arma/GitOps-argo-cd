@@ -46,7 +46,7 @@ jobs:
       - name: Update deployment.yaml with new image
         run: |
           # Update the image tag in deployment.yaml
-          sed -i 's|registry.digitalocean.com/dev-smoke/ecommerce-app:.*|registry.digitalocean.com/dev-smoke/ecommerce-app:${{ github.run_number }}|g' app-manifests/Deployment/deployment.yaml
+          sed -i 's|registry.digitalocean.com/dev-smoke/ecommerce-app:.*|registry.digitalocean.com/dev-smoke/ecommerce-app:${{ github.run_number }}|g' Deployment/deployment.yaml
           
       - name: Commit and push updated deployment.yaml
         run: |

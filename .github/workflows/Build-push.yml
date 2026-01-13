@@ -29,35 +29,31 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t registry.digitalocean.com/dev-smoke/python-app:${{ github.run_number }} .
+          docker build -t registry.digitalocean.com/dev-smoke/ecommerce-app:${{ github.run_number }} .
       
       - name: Login to DigitalOcean registry
         run: doctl registry login
 
       - name: Push Docker image
         run: |
-          docker push registry.digitalocean.com/dev-smoke/python-app:${{ github.run_number }}
+          docker push registry.digitalocean.com/dev-smoke/ecommerce-app:${{ github.run_number }}
 
-  Deploy-to-kubernetes:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install doctl and authenticate
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_CONNECT_TOKEN }}
-
-      - name: Configure kubectl
+      - name: Checkout deployment branch
         run: |
-          echo "Using cluster: $DO_CLUSTER_NAME"
-          doctl kubernetes cluster kubeconfig save "$DO_CLUSTER_NAME"
+          git fetch origin
+          git checkout app-manifests
 
-      - name: Update deployment
+      - name: Update deployment.yaml with new image
         run: |
-          kubectl set image deployment/${DEPLOYMENT_NAME} \
-            $CONTAINER_NAME=${REGISTRY}/${IMAGE_NAME}:${{ github.run_number }}
-
-      - name: Verify deployment
+          # Update the image tag in deployment.yaml
+          sed -i 's|registry.digitalocean.com/dev-smoke/ecommerce-app:.*|registry.digitalocean.com/dev-smoke/ecommerce-app:${{ github.run_number }}|g' app-manifests/Deployment/deployment.yaml
+          
+      - name: Commit and push updated deployment.yaml
         run: |
-          kubectl rollout status deployment/${DEPLOYMENT_NAME}
-          kubectl get pods
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add app-manifests/Deployment/deployment.yaml
+          git commit -m "Update image tag to ${{ github.run_number }}" || exit 0
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

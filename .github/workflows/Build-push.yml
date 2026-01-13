@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITOPS_TOKEN }}
+          fetch-depth: 0
 
       - name: Install doctl and authenticate
         uses: digitalocean/action-doctl@v2

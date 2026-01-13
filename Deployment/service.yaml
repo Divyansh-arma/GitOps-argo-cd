@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-app-service
+  labels:
+    app: ecommerce-app
+spec:
+  selector:
+    app: ecommerce-app
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: ecommerce-app
-        image: python-app:${{ github.run_number }}
+        image: registry.digitalocean.com/dev-smoke/ecommerce-app:anything
         ports:
         - containerPort: 5000
           name: http

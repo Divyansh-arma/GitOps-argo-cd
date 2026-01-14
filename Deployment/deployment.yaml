@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: ecommerce-app
-        image: registry.digitalocean.com/dev-smoke/ecommerce-app:9
+        image: registry.digitalocean.com/dev-smoke/ecommerce-app:10
         ports:
         - containerPort: 5000
           name: http

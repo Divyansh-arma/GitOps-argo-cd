@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ecommerce-app
-  namespace: default
+  namespace: prod
   labels:
     app: ecommerce-app
     version: v1
